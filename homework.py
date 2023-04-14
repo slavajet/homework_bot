@@ -1,30 +1,36 @@
-...
+import os
+import time
+import requests
+import telegram
+from dotenv import load_dotenv
+
 
 load_dotenv()
 
-
-PRACTICUM_TOKEN = ...
-TELEGRAM_TOKEN = ...
-TELEGRAM_CHAT_ID = ...
+PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
-ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
-HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
-
+ENDPOINT = "https://praktikum.yandex.ru/api/user_api/homework_statuses/"
+HEADERS = {"Authorization": f"OAuth {PRACTICUM_TOKEN}"}
 
 HOMEWORK_VERDICTS = {
-    'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
-    'reviewing': 'Работа взята на проверку ревьюером.',
-    'rejected': 'Работа проверена: у ревьюера есть замечания.'
+    "approved": "Ревьюеру всё понравилось, можно приступать к следующему уроку.",
+    "rejected": "К сожалению в работе нашлись ошибки.",
+    "reviewing": "Работа находится на проверке у ревьюера.",
 }
 
 
 def check_tokens():
-    ...
+    """Проверяет доступность переменных окружения."""
+    if not PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        raise ValueError("Не все переменные окружения доступны")
 
 
 def send_message(bot, message):
-    ...
+    """Отправляет сообщение в телеграм."""
+    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
 
 
 def get_api_answer(timestamp):
