@@ -45,14 +45,22 @@ def get_api_answer(timestamp):
     return response.json()
 
 
-def check_response(response):
-    ...
+def check_response(api_answer):
+    """Проверяет корректность ответа от API."""
+    if "homeworks" not in api_answer:
+        raise ValueError('Отсутствует поле homeworks в ответе API.')
+    elif not isinstance(api_answer["homeworks"], list):
+        raise ValueError('Поле homeworks в ответе API должно быть списком.')
+    if "current_date" not in api_answer:
+        raise ValueError('Отсутствует поле current_date в ответе API.')
+    elif not isinstance(api_answer["current_date"], int):
+        raise ValueError('Поле current_date в ответе API должно быть числом.')
 
 
 def parse_status(homework):
     ...
 
-    return f'Изменился статус проверки работы '{homework_name}'. {verdict}'
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
