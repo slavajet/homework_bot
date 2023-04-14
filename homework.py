@@ -58,8 +58,10 @@ def check_response(api_answer):
 
 
 def parse_status(homework):
-    ...
-
+    """Получает статус работы."""
+    status = homework["status"]
+    homework_name = homework["homework_name"]
+    verdict = HOMEWORK_VERDICTS[status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
