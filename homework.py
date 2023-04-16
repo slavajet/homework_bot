@@ -12,13 +12,13 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
-ENDPOINT = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
+ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 HOMEWORK_VERDICTS = {
-    'approved': 'Ревьюеру всё понравилось, можно приступать к следующему уроку.',
-    'rejected': 'К сожалению в работе нашлись ошибки.',
-    'reviewing': 'Работа находится на проверке у ревьюера.',
+    'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
+    'reviewing': 'Работа взята на проверку ревьюером.',
+    'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
 
@@ -67,23 +67,26 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-
-    ...
-
+    check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
-
-    ...
-
     while True:
         try:
-
-            ...
-
-        except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            ...
-        ...
+            api_answer = get_api_answer(timestamp)
+            if api_answer is None:
+                time.sleep(RETRY_PERIOD)
+                continue
+            check_response(api_answer)
+            homeworks = api_answer["homeworks"]
+            if homeworks:
+                for homework in homeworks:
+                    message = parse_status(homework)
+                    send_message(bot, message)
+            timestamp = api_answer["current_date"]
+            time.sleep(RETRY_PERIOD)
+        except Exception as e:
+            print(f"Возникла непредвиденная ошибка: {e}")
+            time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
