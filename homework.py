@@ -1,5 +1,7 @@
 import os
 import time
+import logging
+import sys
 
 import requests
 import telegram
@@ -22,16 +24,28 @@ HOMEWORK_VERDICTS: Dict[str, str] = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=logging.StreamHandler(sys.stdout),
+)
+logger = logging.getLogger(__name__)
+
 
 def check_tokens() -> None:
     """Проверяет доступность переменных окружения."""
     if not PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        logger.critical('Не все переменные окружения доступны')
         raise ValueError('Не все переменные окружения доступны')
 
 
 def send_message(bot, message: str) -> None:
     """Отправляет сообщение в телеграм."""
-    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    try:
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+        logger.debug(f'Сообщение "{message}" успешно отправлено в телеграм')
+    except telegram.error.TelegramError as e:
+        logger.error(f'Ошибка при отправке сообщения в телеграм: {e}')
 
 
 def get_api_answer(timestamp: int) -> Dict[str, list[Dict[str, str]]]:
@@ -39,31 +53,49 @@ def get_api_answer(timestamp: int) -> Dict[str, list[Dict[str, str]]]:
     params: Dict[str, int] = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        response.raise_for_status()
-    except Exception as e:
-        print(f'Возникла ошибка при запросе к API: {e}')
-        return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f'Ошибка при запросе к API: {e}')
+        raise Exception(f'Ошибка при запросе к API: {e}')
+    if response.status_code != 200:
+        logger.error(f'Ошибка при запросе к API. Код ошибки: {response.status_code}')
+        raise Exception(f'Ошибка при запросе к API. Код ошибки: {response.status_code}')
     return response.json()
+
 
 
 def check_response(api_answer: Dict[str, list[Dict[str, str]]]) -> None:
     """Проверяет корректность ответа от API."""
     if "homeworks" not in api_answer:
-        raise ValueError('Отсутствует поле homeworks в ответе API.')
+        message = 'Отсутствует поле homeworks в ответе API.'
+        logging.error(message)
+        raise ValueError(message)
     elif not isinstance(api_answer["homeworks"], list):
-        raise ValueError('Поле homeworks в ответе API должно быть списком.')
+        message = 'Поле homeworks в ответе API должно быть списком.'
+        logging.error(message)
+        raise ValueError(message)
     if "current_date" not in api_answer:
-        raise ValueError('Отсутствует поле current_date в ответе API.')
+        message = 'Отсутствует поле current_date в ответе API.'
+        logging.error(message)
+        raise ValueError(message)
     elif not isinstance(api_answer["current_date"], int):
-        raise ValueError('Поле current_date в ответе API должно быть числом.')
+        message = 'Поле current_date в ответе API должно быть числом.'
+        logging.error(message)
+        raise ValueError(message)
 
 
 def parse_status(homework: Dict[str, str]) -> str:
     """Получает статус работы."""
-    status = homework["status"]
-    homework_name = homework["homework_name"]
-    verdict = HOMEWORK_VERDICTS[status]
+    status = homework.get("status")
+    if status not in HOMEWORK_VERDICTS:
+        raise ValueError(f"Неожиданный статус работы: {status}")
+    verdict = HOMEWORK_VERDICTS.get(status)
+    homework_name = homework.get("homework_name")
+    if homework_name is None:
+        raise ValueError("В ответе API отсутствует ключ 'homework_name'")
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+
+
+
 
 
 def main() -> None:
