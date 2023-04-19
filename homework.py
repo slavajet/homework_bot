@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 def check_tokens() -> None:
     """Проверяет доступность переменных окружения."""
-    if not PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+    if not PRACTICUM_TOKEN or not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         logger.critical('Не все переменные окружения доступны')
         raise ValueError('Не все переменные окружения доступны')
 
@@ -54,11 +54,15 @@ def get_api_answer(timestamp: int) -> dict[str, list[dict[str, str]]]:
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     except requests.exceptions.RequestException as e:
-        logger.error(f'Ошибка при запросе к API: {e}')
-        raise Exception(f'Ошибка при запросе к API: {e}')
+        logger.error(f'Ошибка при запросе к API: "{e}"')
+        raise Exception(f'Ошибка при запросе к API: "{e}"')
     if response.status_code != 200:
-        logger.error(f'Ошибка при запросе к API. Код ошибки: {response.status_code}')
-        raise Exception(f'Ошибка при запросе к API. Код ошибки: {response.status_code}')
+        logger.error(
+            f'Ошибка при запросе к API. Код ошибки: "{response.status_code}"'
+        )
+        raise Exception(
+            f'Ошибка при запросе к API. Код ошибки: "{response.status_code}"'
+        )
     return response.json()
 
 
@@ -86,22 +90,16 @@ def check_response(api_answer: dict[str, list[dict[str, str]]]) -> None:
         raise ValueError(message)
 
 
-
-
-
 def parse_status(homework: dict[str, str]) -> str:
     """Получает статус работы."""
     status = homework.get("status")
     if status not in HOMEWORK_VERDICTS:
-        raise ValueError(f"Неожиданный статус работы: {status}")
+        raise ValueError(f'Неожиданный статус работы: "{status}"')
     verdict = HOMEWORK_VERDICTS.get(status)
     homework_name = homework.get("homework_name")
     if homework_name is None:
         raise ValueError("В ответе API отсутствует ключ 'homework_name'")
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
-
-
-
 
 
 def main() -> None:
@@ -124,7 +122,7 @@ def main() -> None:
             timestamp = api_answer["current_date"]
             time.sleep(RETRY_PERIOD)
         except Exception as e:
-            print(f"Возникла непредвиденная ошибка: {e}")
+            print(f'Возникла непредвиденная ошибка: "{e}"')
             time.sleep(RETRY_PERIOD)
 
 
