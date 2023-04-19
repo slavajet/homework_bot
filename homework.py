@@ -6,7 +6,7 @@ import sys
 import requests
 import telegram
 from dotenv import load_dotenv
-from typing import Dict, Optional
+from typing import Optional
 
 load_dotenv()
 
@@ -16,9 +16,9 @@ TELEGRAM_CHAT_ID: Optional[str] = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD: int = 600
 ENDPOINT: str = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
-HEADERS: Dict[str, str] = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
+HEADERS: dict[str, str] = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
-HOMEWORK_VERDICTS: Dict[str, str] = {
+HOMEWORK_VERDICTS: dict[str, str] = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -48,9 +48,9 @@ def send_message(bot, message: str) -> None:
         logger.error(f'Ошибка при отправке сообщения в телеграм: {e}')
 
 
-def get_api_answer(timestamp: int) -> Dict[str, list[Dict[str, str]]]:
+def get_api_answer(timestamp: int) -> dict[str, list[dict[str, str]]]:
     """Запрос к API."""
-    params: Dict[str, int] = {'from_date': timestamp}
+    params: dict[str, int] = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     except requests.exceptions.RequestException as e:
@@ -62,9 +62,12 @@ def get_api_answer(timestamp: int) -> Dict[str, list[Dict[str, str]]]:
     return response.json()
 
 
-
-def check_response(api_answer: Dict[str, list[Dict[str, str]]]) -> None:
+def check_response(api_answer: dict[str, list[dict[str, str]]]) -> None:
     """Проверяет корректность ответа от API."""
+    if not isinstance(api_answer, dict):
+        message = 'Ответ от API должен быть словарем.'
+        logging.error(message)
+        raise TypeError(message)
     if "homeworks" not in api_answer:
         message = 'Отсутствует поле homeworks в ответе API.'
         logging.error(message)
@@ -72,7 +75,7 @@ def check_response(api_answer: Dict[str, list[Dict[str, str]]]) -> None:
     elif not isinstance(api_answer["homeworks"], list):
         message = 'Поле homeworks в ответе API должно быть списком.'
         logging.error(message)
-        raise ValueError(message)
+        raise TypeError(message)
     if "current_date" not in api_answer:
         message = 'Отсутствует поле current_date в ответе API.'
         logging.error(message)
@@ -83,7 +86,10 @@ def check_response(api_answer: Dict[str, list[Dict[str, str]]]) -> None:
         raise ValueError(message)
 
 
-def parse_status(homework: Dict[str, str]) -> str:
+
+
+
+def parse_status(homework: dict[str, str]) -> str:
     """Получает статус работы."""
     status = homework.get("status")
     if status not in HOMEWORK_VERDICTS:
