@@ -6,13 +6,12 @@ import sys
 import requests
 import telegram
 from dotenv import load_dotenv
-from typing import Optional
 
 load_dotenv()
 
-PRACTICUM_TOKEN: Optional[str] = os.getenv('PRACTICUM_TOKEN')
-TELEGRAM_TOKEN: Optional[str] = os.getenv('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID: Optional[str] = os.getenv('TELEGRAM_CHAT_ID')
+PRACTICUM_TOKEN: str = os.getenv('PRACTICUM_TOKEN')
+TELEGRAM_TOKEN: str = os.getenv('TELEGRAM_TOKEN')
+TELEGRAM_CHAT_ID: str = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD: int = 600
 ENDPOINT: str = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
@@ -24,10 +23,11 @@ HOMEWORK_VERDICTS: dict[str, str] = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
+handlers = [logging.StreamHandler(sys.stdout)]
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s %(message)s',
-    handlers=logging.StreamHandler(sys.stdout),
+    handlers=handlers,
 )
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,19 @@ def send_message(bot, message: str) -> None:
         logger.debug(f'Сообщение "{message}" успешно отправлено в телеграм')
     except telegram.error.TelegramError as e:
         logger.error(f'Ошибка при отправке сообщения в телеграм: {e}')
+        try:
+            error_message = (
+                f'Ошибка при отправке сообщения в телеграм: {e}.'
+                f'Сообщение, которое не удалось отправить: {message}'
+            )
+            bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=error_message)
+            logger.debug(
+                f'Сообщение "{error_message}" об ошибке отправлено в телеграм'
+            )
+        except telegram.error.TelegramError as e:
+            logger.error(
+                f'Ошибка при отправке сообщения об ошибке в телеграм: {e}'
+            )
 
 
 def get_api_answer(timestamp: int) -> dict[str, list[dict[str, str]]]:
